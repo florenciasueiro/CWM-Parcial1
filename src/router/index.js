@@ -1,11 +1,9 @@
-import Vue from 'vue';
-import VueRouter from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 import Home from '../views/Home.vue';
 import Profile from '../views/Profile.vue';
 import PostList from '../views/PostList.vue';
 import CreatePost from '../views/CreatePost.vue';
 
-Vue.use(VueRouter);
 
 const routes = [
   { path: '/', component: Home },
@@ -14,8 +12,9 @@ const routes = [
   { path: '/create', component: CreatePost }
 ];
 
-const router = new VueRouter({
-  mode: 'history',
+
+const router = createRouter({
+  history: createWebHistory(),
   routes
 });
 
