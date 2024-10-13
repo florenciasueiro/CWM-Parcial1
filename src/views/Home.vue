@@ -106,7 +106,7 @@ export default {
           const user = userCredential.user;
           
           // Guardar el nombre de usuario en Firestore
-          setDoc(doc(collection(db, "users"), user.uid), {
+          setDoc(doc(collection(db, "users"), userid1), {
             username: this.registerUsername,
             email: this.registerEmail,
             createdAt: new Date()
