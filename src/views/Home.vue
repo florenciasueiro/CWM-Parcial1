@@ -42,6 +42,11 @@
       <h1>Bienvenido a Finstagram</h1>
       <p>¡Conéctate con tus amigos, comparte tus pensamientos y mucho más!</p>
     </div>
+    <section class="saludillo" v-if="user">
+      <p>Esto significa que el usuario está registrado</p>
+      <UserProfile :user="user" />
+    </section>
+
     <div class="container" id="container">
       <section v-if="!user">
         <div div class="form-container sign-up-container">

@@ -74,26 +74,3 @@ export default {
 };
 </script>
 
-<style scoped>
-.content {
-  padding: 20px;
-}
-
-.create-post {
-  margin-bottom: 20px;
-}
-
-textarea {
-  width: 100%;
-  height: 80px;
-}
-
-button {
-  padding: 10px;
-}
-
-.posts .post {
-  border-bottom: 1px solid #ddd;
-  padding: 10px 0;
-}
-</style>

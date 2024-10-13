@@ -31,21 +31,3 @@ export default {
   }
 };
 </script>
-
-<style scoped>
-.profile {
-  background-color: #f0f0f0;
-  padding: 20px;
-}
-
-.user-info {
-  text-align: center;
-}
-
-.profile-pic {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  margin-bottom: 20px;
-}
-</style>
