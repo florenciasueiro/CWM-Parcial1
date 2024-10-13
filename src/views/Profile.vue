@@ -1,33 +1,51 @@
 <template>
-  <div>
-    <h1>Perfil de {{ user.email }}</h1>
-    <button @click="editProfile">Editar Perfil</button>
-    <div>
-      <h2>Tus Publicaciones</h2>
-      <post-component v-for="post in userPosts" :key="post.id" :post="post" />
+  <aside class="profile">
+    <div class="user-info">
+      <img :src="user.photoURL || defaultProfilePic" alt="Foto de perfil" class="profile-pic">
+      <h2>{{ user.displayName || 'Usuario' }}</h2>
+      <p>{{ user.email }}</p>
+      <button @click="logoutUser">Cerrar Sesión</button>
     </div>
-  </div>
+  </aside>
 </template>
 
 <script>
-import { auth, db } from '../../firebase';
+import { signOut } from "firebase/auth";
+import { auth } from '../../firebase';  // Asegúrate de tener Firebase configurado
 
 export default {
+  props: ['user'],  // Recibe el objeto user desde el componente padre (Home.vue)
   data() {
     return {
-      user: auth.currentUser,
-      userPosts: []
+      defaultProfilePic: 'https://via.placeholder.com/150'  // Imagen de perfil por defecto
     };
   },
-  created() {
-    db.collection('posts').where('author', '==', this.user.email).onSnapshot(snapshot => {
-      this.userPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    });
-  },
   methods: {
-    editProfile() {
-      // Lógica para editar el perfil del usuario
+    logoutUser() {
+      signOut(auth).then(() => {
+        this.$emit('logout');  // Emitimos un evento para informar al componente padre
+      }).catch((error) => {
+        console.error("Error al cerrar sesión: ", error.message);
+      });
     }
   }
 };
 </script>
+
+<style scoped>
+.profile {
+  background-color: #f0f0f0;
+  padding: 20px;
+}
+
+.user-info {
+  text-align: center;
+}
+
+.profile-pic {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-bottom: 20px;
+}
+</style>
