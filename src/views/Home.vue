@@ -109,10 +109,9 @@
 </template>
 
 <script>
-
-import { db, auth } from '../../firebase';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, collection, doc, setDoc } from "firebase/firestore";
+import { db, auth } from '../../firebase';  // Ya tienes auth y db importados desde aquí
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { collection, doc, setDoc, addDoc } from "firebase/firestore";
 
 export default {
   data() {
@@ -138,7 +137,6 @@ export default {
   methods: {
     // Función para iniciar sesión
     loginUser() {
-      const auth = getAuth();
       signInWithEmailAndPassword(auth, this.loginEmail, this.loginPassword)
         .then((userCredential) => {
           alert("Inicio de sesión exitoso");
@@ -149,36 +147,39 @@ export default {
     },
 
     // Función para registrar un nuevo usuario
-    registerUser() {
-      const auth = getAuth();
-      const db = getFirestore();
+registerUser() {
+  createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword)
+    .then(async (userCredential) => {
+      const user = userCredential.user;
 
-      createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword)
-        .then((userCredential) => {
-          const user = userCredential.user;
-          
-          // Guardar el nombre de usuario en Firestore
-          setDoc(doc(collection(db, "users"), userid1), {
-            username: this.registerUsername,
-            email: this.registerEmail,
-            createdAt: new Date()
-          });
-
-          alert("Registro exitoso");
-        })
-        .catch((error) => {
-          console.error("Error al registrarse: ", error.message);
+      // Guardar el nombre de usuario en Firestore
+      try {
+        // Cambia a setDoc para usar user.uid como ID del documento
+        await setDoc(doc(db, "users", user.uid), {
+          username: this.registerUsername,
+          email: this.registerEmail,
+          password: this.registerPassword, // Recuerda que no es recomendable guardar contraseñas en texto plano
+          createdAt: new Date()
         });
-    },
+        alert("Registro exitoso");
+      } catch (error) {
+        console.error("Error al guardar los datos en Firestore: ", error.message);
+      }
+    })
+    .catch((error) => {
+      console.error("Error al registrarse: ", error.message);
+    });
+},
+
 
     // Cargar las publicaciones de Firestore si hay un usuario autenticado
     loadPosts() {
-      const db = getFirestore();
       collection(db, 'posts').orderBy('date', 'desc').onSnapshot(snapshot => {
         this.posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       });
     }
   }
 };
+
 
 </script>
