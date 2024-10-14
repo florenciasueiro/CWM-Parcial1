@@ -111,14 +111,14 @@
           </header>
           <section>
             <p>{{ post.descripcion }}</p>
-            <p><strong>Fecha de publicación:</strong> {{ post.fecha_publicacion.toDate().toLocaleDateString() }}</p>
+            <p><strong>Fecha de publicación:</strong> {{ post.fecha_publicacion.toLocaleDateString() }}</p>
           </section>
           <!-- Sección de comentarios -->
           <section class="comments">
             <h4>Comentarios</h4>
             <div v-if="post.comments && post.comments.length > 0">
               <div v-for="comment in post.comments" :key="comment.id" class="comment">
-                <p><strong>{{ comment.author }}:</strong> {{ comment.text }}</p>
+                <p><strong>{{ comment.autor }}:</strong> {{ comment.contenido }}</p>
               </div>
             </div>
             <p v-else>No hay comentarios aún. ¡Sé el primero en comentar!</p>
@@ -136,8 +136,8 @@
 
 <script>
 import { db, auth } from '../../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { collection, doc, setDoc, query, orderBy, onSnapshot, addDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+import { collection, doc, setDoc, query, orderBy, onSnapshot, addDoc, where } from "firebase/firestore";
 
 export default {
   data() {
@@ -164,27 +164,30 @@ export default {
   },
   methods: {
     // Cargar publicaciones y comentarios
-    loadPosts() {
-      const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
-      onSnapshot(postsQuery, snapshot => {
-        this.posts = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          comments: [] // Inicializar comentarios vacíos
-        }));
+loadPosts() {
+  const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
+  onSnapshot(postsQuery, snapshot => {
+    this.posts = snapshot.docs.map(doc => {
+      const postData = doc.data();
+      return {
+        id: doc.id,
+        ...postData,
+        fecha_publicacion: postData.fecha_publicacion.toDate() // Convertir Timestamp a Date
+      };
+    });
 
-        // Cargar los comentarios para cada publicación
-        this.posts.forEach(post => {
-          const commentsRef = collection(db, 'posts', post.id, 'comments');
-          onSnapshot(commentsRef, commentSnapshot => {
-            post.comments = commentSnapshot.docs.map(commentDoc => ({
-              id: commentDoc.id,
-              ...commentDoc.data()
-            }));
-          });
-        });
+    // Cargar los comentarios de la colección 'comments' para cada post
+    this.posts.forEach(post => {
+      const commentsQuery = query(collection(db, 'comments'), where('postId', '==', post.id));
+      onSnapshot(commentsQuery, commentSnapshot => {
+        post.comments = commentSnapshot.docs.map(commentDoc => ({
+          id: commentDoc.id,
+          ...commentDoc.data()
+        }));
       });
-    },
+    });
+  });
+},
 
     // Crear una nueva publicación
     async createPost() {
@@ -214,13 +217,16 @@ export default {
       const author = this.user ? (this.user.displayName || this.user.email) : 'Anónimo';
 
       try {
-        await addDoc(collection(db, 'posts', postId, 'comments'), {
-          text: commentText,
-          author: author,
-          date: new Date()
+        // Añadir el comentario a la colección 'comments' en Firebase
+        await addDoc(collection(db, 'comments'), {
+          contenido: commentText,
+          autor: author,
+          publicacion: new Date(),  // Timestamp de la publicación del comentario
+          postId: postId  // Relacionar comentario con la publicación
         });
 
-        this.newCommentText[postId] = ''; // Limpiar el campo de comentario
+        // Limpiar el campo de comentario tras enviarlo
+        this.newCommentText[postId] = ''; 
       } catch (error) {
         console.error("Error al agregar el comentario: ", error.message);
       }
@@ -232,9 +238,13 @@ export default {
         const userCredential = await createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword);
         this.user = userCredential.user;
         // Guardar el nombre de usuario en Firebase Auth
-        await this.user.updateProfile({
+        await updateProfile(this.user, {
           displayName: this.registerUsername
         });
+        // Limpiar campos
+        this.registerUsername = '';
+        this.registerEmail = '';
+        this.registerPassword = '';
       } catch (error) {
         console.error("Error al registrar usuario: ", error.message);
       }
@@ -260,14 +270,12 @@ export default {
       }
     },
 
-    // Cambiar entre registro y login (si es necesario)
-    switchToSignUp() {
-      const container = document.getElementById('container');
-      container.classList.add('right-panel-active');
-    },
+    // Cambiar entre registro y login (si tienes animaciones o clases dinámicas)
     switchToSignIn() {
-      const container = document.getElementById('container');
-      container.classList.remove('right-panel-active');
+      document.getElementById('container').classList.remove('right-panel-active');
+    },
+    switchToSignUp() {
+      document.getElementById('container').classList.add('right-panel-active');
     }
   }
 };
