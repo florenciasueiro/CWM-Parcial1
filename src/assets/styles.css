@@ -219,6 +219,20 @@ input {
 	transform: translateX(20%);
 }
 
+
+/*----------------------------------------------------------- Perfil ----------------------------------------------------*/
+
+.publis{
+	position: relative;
+	z-index: 100000;
+	background-color: #fffffff8;
+	border-radius: 10px;
+  	box-shadow: 2px 2px 5px rgba(0,0,0,0.9); 
+	padding: 10px 50px;
+	margin: 10px;
+}
+  
+
 /*----------------------------------------------------------- Fondo ----------------------------------------------------*/
 
 .backwrap {
