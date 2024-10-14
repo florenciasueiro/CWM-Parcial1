@@ -3,7 +3,8 @@
     <div class="create-post">
       <h2>Crear nueva publicación</h2>
       <form @submit.prevent="createPost">
-        <textarea v-model="newPostContent" placeholder="¿Qué estás pensando?" required></textarea>
+        <input v-model="newPostTitle" placeholder="Título" required />
+        <textarea v-model="newPostDescription" placeholder="Descripción" required></textarea>
         <button type="submit">Publicar</button>
       </form>
     </div>
@@ -17,11 +18,12 @@
       <div v-else>
         <article v-for="post in posts" :key="post.id" class="post">
           <header>
-            <h3>{{ post.title }}</h3>
-            <p>Publicado por: {{ post.author }}</p>
+            <h3>{{ post.titulo }}</h3>
+            <p>Publicado por: {{ post.autor }}</p>
           </header>
           <section>
-            <p>{{ post.content }}</p>
+            <p>{{ post.descripcion }}</p>
+            <p><strong>Fecha de publicación:</strong> {{ new Date(post.fecha_publicacion.seconds * 1000).toLocaleDateString() }}</p>
           </section>
           <footer>
             <router-link :to="'/posts/' + post.id">Leer más</router-link>
@@ -33,7 +35,7 @@
 </template>
 
 <script>
-import { collection, addDoc, orderBy } from "firebase/firestore";
+import { collection, addDoc, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from '../../firebase';  // Asegúrate de tener Firebase configurado
 
 export default {
@@ -41,7 +43,8 @@ export default {
   data() {
     return {
       posts: [],
-      newPostContent: ''
+      newPostTitle: '',
+      newPostDescription: ''
     };
   },
   created() {
@@ -49,24 +52,28 @@ export default {
   },
   methods: {
     // Crear nueva publicación
-    createPost() {
-      if (!this.newPostContent) return;
-      
-      addDoc(collection(db, 'posts'), {
-        content: this.newPostContent,
-        author: this.user.displayName || this.user.email,
-        date: new Date()
-      }).then(() => {
-        this.newPostContent = '';  // Limpiar el campo de la publicación
+    async createPost() {
+      if (!this.newPostTitle || !this.newPostDescription) return;
+
+      try {
+        await addDoc(collection(db, 'posts'), {
+          titulo: this.newPostTitle,
+          descripcion: this.newPostDescription,
+          autor: this.user.displayName || this.user.email,
+          fecha_publicacion: new Date()  // Se guardará como Timestamp en Firestore
+        });
+        this.newPostTitle = '';  // Limpiar el campo de título
+        this.newPostDescription = '';  // Limpiar el campo de descripción
         this.loadPosts();  // Recargar las publicaciones
-      }).catch((error) => {
+      } catch (error) {
         console.error("Error al crear la publicación: ", error.message);
-      });
+      }
     },
 
     // Cargar las publicaciones de Firestore
     loadPosts() {
-      collection(db, 'posts').orderBy('date', 'desc').onSnapshot(snapshot => {
+      const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
+      onSnapshot(postsQuery, snapshot => {
         this.posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       });
     }
