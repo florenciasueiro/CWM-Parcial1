@@ -107,18 +107,32 @@
         <article v-for="post in posts" :key="post.id" class="post">
           <header>
             <h3>{{ post.titulo }}</h3>
-            <p>Publicado por: {{ post.autor }}</p>
+            <p>Publicado por: 
+              <!-- Aquí redirigimos al perfil del autor con su userId -->
+              <router-link :to="{ name: 'UserProfile', params: { userId: post.autorId } }">
+                {{ post.autor }}
+              </router-link>
+            </p>
           </header>
           <section>
             <p>{{ post.descripcion }}</p>
             <p><strong>Fecha de publicación:</strong> {{ post.fecha_publicacion.toLocaleDateString() }}</p>
           </section>
+
           <!-- Sección de comentarios -->
           <section class="comments">
             <h4>Comentarios</h4>
             <div v-if="post.comments && post.comments.length > 0">
               <div v-for="comment in post.comments" :key="comment.id" class="comment">
-                <p><strong>{{ comment.autor }}:</strong> {{ comment.contenido }}</p>
+                <p>
+                  <strong>
+                    <!-- Redirigir al perfil del autor del comentario -->
+                    <router-link :to="{ name: 'UserProfile', params: { userId: comment.autorId } }">
+                      {{ comment.autor }}
+                    </router-link>:
+                  </strong> 
+                  {{ comment.contenido }}
+                </p>
               </div>
             </div>
             <p v-else>No hay comentarios aún. ¡Sé el primero en comentar!</p>
@@ -164,30 +178,30 @@ export default {
   },
   methods: {
     // Cargar publicaciones y comentarios
-loadPosts() {
-  const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
-  onSnapshot(postsQuery, snapshot => {
-    this.posts = snapshot.docs.map(doc => {
-      const postData = doc.data();
-      return {
-        id: doc.id,
-        ...postData,
-        fecha_publicacion: postData.fecha_publicacion.toDate() // Convertir Timestamp a Date
-      };
-    });
+    loadPosts() {
+      const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
+      onSnapshot(postsQuery, snapshot => {
+        this.posts = snapshot.docs.map(doc => {
+          const postData = doc.data();
+          return {
+            id: doc.id,
+            ...postData,
+            fecha_publicacion: postData.fecha_publicacion.toDate() // Convertir Timestamp a Date
+          };
+        });
 
-    // Cargar los comentarios de la colección 'comments' para cada post
-    this.posts.forEach(post => {
-      const commentsQuery = query(collection(db, 'comments'), where('postId', '==', post.id));
-      onSnapshot(commentsQuery, commentSnapshot => {
-        post.comments = commentSnapshot.docs.map(commentDoc => ({
-          id: commentDoc.id,
-          ...commentDoc.data()
-        }));
+        // Cargar los comentarios de la colección 'comments' para cada post
+        this.posts.forEach(post => {
+          const commentsQuery = query(collection(db, 'comments'), where('postId', '==', post.id));
+          onSnapshot(commentsQuery, commentSnapshot => {
+            post.comments = commentSnapshot.docs.map(commentDoc => ({
+              id: commentDoc.id,
+              ...commentDoc.data()
+            }));
+          });
+        });
       });
-    });
-  });
-},
+    },
 
     // Crear una nueva publicación
     async createPost() {
@@ -200,6 +214,7 @@ loadPosts() {
           titulo: this.newPostTitle,
           descripcion: this.newPostDescription,
           autor: author,
+          autorId: this.user.uid, // Guardar el userId del autor
           fecha_publicacion: new Date()
         });
         this.newPostTitle = '';
@@ -221,46 +236,47 @@ loadPosts() {
         await addDoc(collection(db, 'comments'), {
           contenido: commentText,
           autor: author,
+          autorId: this.user.uid, // Guardar el userId del autor del comentario
           publicacion: new Date(),  // Timestamp de la publicación del comentario
-          postId: postId  // Relacionar comentario con la publicación
+          postId: postId  // Relacionar el comentario con la publicación
         });
 
-        // Limpiar el campo de comentario tras enviarlo
-        this.newCommentText[postId] = ''; 
+        // Limpiar el campo de texto después de agregar el comentario
+        this.$set(this.newCommentText, postId, ''); // Limpiar el comentario específico
       } catch (error) {
         console.error("Error al agregar el comentario: ", error.message);
       }
     },
 
-    // Registrar un nuevo usuario
-    async registerUser() {
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword);
-        this.user = userCredential.user;
-        // Guardar el nombre de usuario en Firebase Auth
-        await updateProfile(this.user, {
-          displayName: this.registerUsername
-        });
-        // Limpiar campos
-        this.registerUsername = '';
-        this.registerEmail = '';
-        this.registerPassword = '';
-      } catch (error) {
-        console.error("Error al registrar usuario: ", error.message);
-      }
-    },
-
-    // Iniciar sesión
+    // Login de usuario
     async loginUser() {
       try {
         const userCredential = await signInWithEmailAndPassword(auth, this.loginEmail, this.loginPassword);
         this.user = userCredential.user;
+        this.loadPosts();
       } catch (error) {
         console.error("Error al iniciar sesión: ", error.message);
       }
     },
 
-    // Cerrar sesión
+    // Registro de usuario
+    async registerUser() {
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword);
+        this.user = userCredential.user;
+
+        // Actualizar el nombre de usuario en el perfil de Firebase
+        await updateProfile(this.user, {
+          displayName: this.registerUsername
+        });
+
+        this.loadPosts();
+      } catch (error) {
+        console.error("Error al registrar usuario: ", error.message);
+      }
+    },
+
+    // Logout de usuario
     async logoutUser() {
       try {
         await signOut(auth);
@@ -270,12 +286,12 @@ loadPosts() {
       }
     },
 
-    // Cambiar entre registro y login (si tienes animaciones o clases dinámicas)
     switchToSignIn() {
-      document.getElementById('container').classList.remove('right-panel-active');
+      document.getElementById('container').classList.remove("right-panel-active");
     },
+
     switchToSignUp() {
-      document.getElementById('container').classList.add('right-panel-active');
+      document.getElementById('container').classList.add("right-panel-active");
     }
   }
 };
