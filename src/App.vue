@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <router-view v-if="currentUser" :user="currentUser" />
+    <router-view :user="currentUser" />
   </div>
 </template>
 

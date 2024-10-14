@@ -42,14 +42,17 @@
       <h1>Bienvenido a Finstagram</h1>
       <p>¡Conéctate con tus amigos, comparte tus pensamientos y mucho más!</p>
     </div>
+
+    <!-- Mostrar perfil de usuario si está autenticado -->
     <section class="saludillo" v-if="user">
       <p>Esto significa que el usuario está registrado</p>
       <UserProfile :user="user" @logout="user = null" />
       <button class="logout" @click="logoutUser">Cerrar Sesión</button>
     </section>
 
-    <div class="container" id="container">
-      <section v-if="!user">
+    <!-- Formulario de login/registro si el usuario no está autenticado -->
+    <section v-if="!user">
+      <div class="container" id="container">
         <div class="form-container sign-up-container">
           <form @submit.prevent="registerUser">
             <h1>Creá una cuenta</h1>
@@ -75,29 +78,27 @@
             <div class="overlay-panel overlay-left">
               <h1>¡Bienvenido de Vuelta!</h1>
               <p>¿Ya tenés cuenta? ¡Accedé con tús datos!</p>
-              <button class="ghost" id="signIn">Iniciar Sesión</button>
+              <button class="ghost" @click="switchToSignIn">Iniciar Sesión</button>
             </div>
             <div class="overlay-panel overlay-right">
               <h1>¡Bienvenido usuario!</h1>
               <p>¿No tenés una cuenta todavía? ¡Registrate!</p>
-              <button class="ghost" id="signUp">Registrarse</button>
+              <button class="ghost" @click="switchToSignUp">Registrarse</button>
             </div>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
 
-  <!-- Sección de publicaciones y crear publicación (si el usuario está autenticado) -->
-  <section class="publis" v-if="user">
+    <!-- Sección de publicaciones y crear publicación (si el usuario está autenticado) -->
+    <section class="publis" v-if="user">
       <h2>Crear nueva publicación</h2>
-      <!-- Formulario para crear una nueva publicación -->
       <form @submit.prevent="createPost">
         <input v-model="newPostTitle" placeholder="Título" required />
         <textarea v-model="newPostDescription" placeholder="Descripción" required></textarea>
         <button type="submit">Publicar</button>
       </form>
 
-      <!-- Mostrar las publicaciones -->
       <h2>Últimas Publicaciones</h2>
       <div v-if="posts.length === 0">
         <p>No hay publicaciones aún. ¡Sé el primero en publicar!</p>
@@ -110,7 +111,22 @@
           </header>
           <section>
             <p>{{ post.descripcion }}</p>
-            <p><strong>Fecha de publicación:</strong> {{ new Date(post.fecha_publicacion.seconds * 1000).toLocaleDateString() }}</p>
+            <p><strong>Fecha de publicación:</strong> {{ post.fecha_publicacion.toDate().toLocaleDateString() }}</p>
+          </section>
+          <!-- Sección de comentarios -->
+          <section class="comments">
+            <h4>Comentarios</h4>
+            <div v-if="post.comments && post.comments.length > 0">
+              <div v-for="comment in post.comments" :key="comment.id" class="comment">
+                <p><strong>{{ comment.author }}:</strong> {{ comment.text }}</p>
+              </div>
+            </div>
+            <p v-else>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+
+            <form @submit.prevent="addComment(post.id)">
+              <textarea v-model="newCommentText[post.id]" placeholder="Escribe un comentario..." required></textarea>
+              <button type="submit">Comentar</button>
+            </form>
           </section>
         </article>
       </div>
@@ -119,25 +135,26 @@
 </template>
 
 <script>
-import UserProfile from './Profile.vue';
-import { db, auth } from '../../firebase';  // Ya tienes auth y db importados desde aquí
+import { db, auth } from '../../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, doc, setDoc, query, orderBy, onSnapshot, addDoc } from "firebase/firestore";
 
 export default {
   data() {
     return {
-      user: null,                // Estado para manejar al usuario autenticado
-      posts: [],                 // Lista de publicaciones
-      loginEmail: '',            // Campo de correo electrónico para login
-      loginPassword: '',         // Campo de contraseña para login
-      registerUsername: '',      // Campo de nombre de usuario para registro
-      registerEmail: '',         // Campo de correo electrónico para registro
-      registerPassword: ''       // Campo de contraseña para registro
+      user: null,
+      posts: [],
+      newPostTitle: '',
+      newPostDescription: '',
+      newCommentText: {}, // Almacenar los comentarios por publicación
+      loginEmail: '',
+      loginPassword: '',
+      registerUsername: '',
+      registerEmail: '',
+      registerPassword: ''
     };
   },
   created() {
-    // Verifica si el usuario está autenticado
     auth.onAuthStateChanged(user => {
       this.user = user;
       if (this.user) {
@@ -146,64 +163,31 @@ export default {
     });
   },
   methods: {
-    // Función para iniciar sesión
-    loginUser() {
-      signInWithEmailAndPassword(auth, this.loginEmail, this.loginPassword)
-        .then((userCredential) => {
-          this.user = userCredential.user; // Actualiza el usuario
-          alert("Inicio de sesión exitoso");
-        })
-        .catch((error) => {
-          console.error("Error al iniciar sesión: ", error.message);
-        });
-    },
-
-    // Función para registrar un nuevo usuario
-    registerUser() {
-      createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword)
-        .then(async (userCredential) => {
-          const user = userCredential.user;
-
-          // Guardar el nombre de usuario en Firestore
-          try {
-            await setDoc(doc(db, "users", user.uid), {
-              username: this.registerUsername,
-              email: this.registerEmail,
-              password: this.registerPassword, // Recuerda que no es recomendable guardar contraseñas en texto plano
-              createdAt: new Date()
-            });
-            alert("Registro exitoso");
-          } catch (error) {
-            console.error("Error al guardar los datos en Firestore: ", error.message);
-          }
-        })
-        .catch((error) => {
-          console.error("Error al registrarse: ", error.message);
-        });
-    },
-
-    // Función para cerrar sesión
-    logoutUser() {
-      signOut(auth).then(() => {
-        this.user = null;  // Limpia el usuario al cerrar sesión
-        alert("Has cerrado sesión");
-      }).catch((error) => {
-        console.error("Error al cerrar sesión: ", error.message);
-      });
-    },
-
-    // Cargar las publicaciones de Firestore si hay un usuario autenticado
+    // Cargar publicaciones y comentarios
     loadPosts() {
-      const postsCollection = collection(db, 'posts');
-      const postsQuery = query(postsCollection, orderBy('date', 'desc'));
+      const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
+      onSnapshot(postsQuery, snapshot => {
+        this.posts = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          comments: [] // Inicializar comentarios vacíos
+        }));
 
-      // Suscribirse a los cambios en los documentos
-      onSnapshot(postsQuery, (snapshot) => {
-        this.posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Cargar los comentarios para cada publicación
+        this.posts.forEach(post => {
+          const commentsRef = collection(db, 'posts', post.id, 'comments');
+          onSnapshot(commentsRef, commentSnapshot => {
+            post.comments = commentSnapshot.docs.map(commentDoc => ({
+              id: commentDoc.id,
+              ...commentDoc.data()
+            }));
+          });
+        });
       });
     },
- // Crear nueva publicación
- async createPost() {
+
+    // Crear una nueva publicación
+    async createPost() {
       if (!this.newPostTitle || !this.newPostDescription) return;
 
       const author = this.user ? (this.user.displayName || this.user.email) : 'Anónimo';
@@ -215,20 +199,75 @@ export default {
           autor: author,
           fecha_publicacion: new Date()
         });
-        this.newPostTitle = '';  // Limpiar el campo de título
-        this.newPostDescription = '';  // Limpiar el campo de descripción
-        this.loadPosts();  // Recargar las publicaciones
+        this.newPostTitle = '';
+        this.newPostDescription = '';
       } catch (error) {
         console.error("Error al crear la publicación: ", error.message);
       }
     },
 
-    // Cargar las publicaciones de Firestore
-    loadPosts() {
-      const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
-      onSnapshot(postsQuery, snapshot => {
-        this.posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      });
+    // Añadir un comentario
+    async addComment(postId) {
+      const commentText = this.newCommentText[postId]; // Obtener el comentario para la publicación
+      if (!commentText) return;
+
+      const author = this.user ? (this.user.displayName || this.user.email) : 'Anónimo';
+
+      try {
+        await addDoc(collection(db, 'posts', postId, 'comments'), {
+          text: commentText,
+          author: author,
+          date: new Date()
+        });
+
+        this.newCommentText[postId] = ''; // Limpiar el campo de comentario
+      } catch (error) {
+        console.error("Error al agregar el comentario: ", error.message);
+      }
+    },
+
+    // Registrar un nuevo usuario
+    async registerUser() {
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword);
+        this.user = userCredential.user;
+        // Guardar el nombre de usuario en Firebase Auth
+        await this.user.updateProfile({
+          displayName: this.registerUsername
+        });
+      } catch (error) {
+        console.error("Error al registrar usuario: ", error.message);
+      }
+    },
+
+    // Iniciar sesión
+    async loginUser() {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, this.loginEmail, this.loginPassword);
+        this.user = userCredential.user;
+      } catch (error) {
+        console.error("Error al iniciar sesión: ", error.message);
+      }
+    },
+
+    // Cerrar sesión
+    async logoutUser() {
+      try {
+        await signOut(auth);
+        this.user = null;
+      } catch (error) {
+        console.error("Error al cerrar sesión: ", error.message);
+      }
+    },
+
+    // Cambiar entre registro y login (si es necesario)
+    switchToSignUp() {
+      const container = document.getElementById('container');
+      container.classList.add('right-panel-active');
+    },
+    switchToSignIn() {
+      const container = document.getElementById('container');
+      container.classList.remove('right-panel-active');
     }
   }
 };
