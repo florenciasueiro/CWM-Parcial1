@@ -1,13 +1,5 @@
 <template>
   <main class="content">
-    <div class="create-post">
-      <h2>Crear nueva publicación</h2>
-      <form @submit.prevent="createPost">
-        <input v-model="newPostTitle" placeholder="Título" required />
-        <textarea v-model="newPostDescription" placeholder="Descripción" required></textarea>
-        <button type="submit">Publicar</button>
-      </form>
-    </div>
 
     <!-- Lista de publicaciones -->
     <section class="posts">
