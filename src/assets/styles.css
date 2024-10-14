@@ -231,7 +231,12 @@ input {
 	padding: 10px 50px;
 	margin: 10px;
 }
-  
+
+.logout{
+	background-color: rgba(139, 0, 0, 0.842);
+	text-shadow: 2px 2px 5px black;
+	border: solid 1px black;
+}
 
 /*----------------------------------------------------------- Fondo ----------------------------------------------------*/
 

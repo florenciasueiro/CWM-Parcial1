@@ -44,7 +44,8 @@
       <p>¡Conéctate con tus amigos, comparte tus pensamientos y mucho más!</p>
     </div>
       <p>Esto significa que el usuario está registrado</p>
-      <UserProfile :user="user" />
+      <UserProfile :user="user" @logout="user = null" />
+      <button class="logout" @click="logoutUser">Cerrar Sesión</button>
     </section>
 
     <div class="container" id="container">
@@ -115,9 +116,8 @@
 
 <script>
 import UserProfile from './Profile.vue';
-import PostFeed from './PostList.vue';
 import { db, auth } from '../../firebase';  // Ya tienes auth y db importados desde aquí
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, doc, setDoc, query, orderBy, onSnapshot } from "firebase/firestore";
 
 export default {
@@ -146,6 +146,7 @@ export default {
     loginUser() {
       signInWithEmailAndPassword(auth, this.loginEmail, this.loginPassword)
         .then((userCredential) => {
+          this.user = userCredential.user; // Actualiza el usuario
           alert("Inicio de sesión exitoso");
         })
         .catch((error) => {
@@ -161,7 +162,6 @@ export default {
 
           // Guardar el nombre de usuario en Firestore
           try {
-            // Cambia a setDoc para usar user.uid como ID del documento
             await setDoc(doc(db, "users", user.uid), {
               username: this.registerUsername,
               email: this.registerEmail,
@@ -176,6 +176,16 @@ export default {
         .catch((error) => {
           console.error("Error al registrarse: ", error.message);
         });
+    },
+
+    // Función para cerrar sesión
+    logoutUser() {
+      signOut(auth).then(() => {
+        this.user = null;  // Limpia el usuario al cerrar sesión
+        alert("Has cerrado sesión");
+      }).catch((error) => {
+        console.error("Error al cerrar sesión: ", error.message);
+      });
     },
 
     // Cargar las publicaciones de Firestore si hay un usuario autenticado
