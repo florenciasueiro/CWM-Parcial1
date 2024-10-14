@@ -219,7 +219,7 @@ input {
 }
 
 
-/*----------------------------------------------------------- Perfil ----------------------------------------------------*/
+/*----------------------------------------------------------- Publicaciones ----------------------------------------------------*/
 
 .publis{
 	position: relative;
@@ -228,7 +228,8 @@ input {
 	border-radius: 10px;
   	box-shadow: 2px 2px 5px rgba(0,0,0,0.9); 
 	padding: 10px 50px;
-	margin: 10px;
+	margin: 10px 0;
+	width: 900px;
 }
 
 .logout{
@@ -240,6 +241,44 @@ input {
 .logout:hover{
 	background-color: rgba(114, 0, 0, 0.85);
 }
+
+.publis form{
+	background-color: #185274bb;
+	border-radius: 10px;
+	padding: 30px;
+	border: #113243 solid 1px;
+}
+
+.publis input, .publis textarea{
+	border-radius: 5px;
+	width: 100%;
+	margin: 10px;
+	border: #113243 solid 1px;
+}
+
+.publis textarea{
+	height: 50px;
+	text-indent: 10px;
+}
+
+.publis form button:hover{
+	transition: 0.5s background-color ease-in-out;
+	background-color: #185274bb;
+}
+
+.posteos{
+	overflow: auto;
+	height: 300px;
+}
+
+.post{
+	border: solid 2px #113243;
+	margin: 10px auto;
+	padding: 10px;
+	border-radius: 10px;
+	width: 90%;
+}
+
 
 /*----------------------------------------------------------- Fondo ----------------------------------------------------*/
 
@@ -254,7 +293,7 @@ input {
 	position: fixed;
 	left: 0;
 	top: 0;
-	z-index: 1;
+	z-index: -1;
   }
   
   /* Shapes & Animation

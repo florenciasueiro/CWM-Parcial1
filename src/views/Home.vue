@@ -87,27 +87,31 @@
       </section>
     </div>
 
-    <!-- Feed de publicaciones (solo si el usuario está autenticado) -->
-    <section class="publis" v-if="user">
-      <h2>Últimas Publicaciones</h2>
-      <router-link to="/create">Crear nueva publicación</router-link>
+  <!-- Sección de publicaciones y crear publicación (si el usuario está autenticado) -->
+  <section class="publis" v-if="user">
+      <h2>Crear nueva publicación</h2>
+      <!-- Formulario para crear una nueva publicación -->
+      <form @submit.prevent="createPost">
+        <input v-model="newPostTitle" placeholder="Título" required />
+        <textarea v-model="newPostDescription" placeholder="Descripción" required></textarea>
+        <button type="submit">Publicar</button>
+      </form>
 
+      <!-- Mostrar las publicaciones -->
+      <h2>Últimas Publicaciones</h2>
       <div v-if="posts.length === 0">
         <p>No hay publicaciones aún. ¡Sé el primero en publicar!</p>
       </div>
-
-      <div v-else>
+      <div class="posteos" v-else>
         <article v-for="post in posts" :key="post.id" class="post">
           <header>
-            <h3>{{ post.title }}</h3>
-            <p>Publicado por: {{ post.author }}</p>
+            <h3>{{ post.titulo }}</h3>
+            <p>Publicado por: {{ post.autor }}</p>
           </header>
           <section>
-            <p>{{ post.content }}</p>
+            <p>{{ post.descripcion }}</p>
+            <p><strong>Fecha de publicación:</strong> {{ new Date(post.fecha_publicacion.seconds * 1000).toLocaleDateString() }}</p>
           </section>
-          <footer>
-            <router-link :to="'/posts/' + post.id">Leer más</router-link>
-          </footer>
         </article>
       </div>
     </section>
@@ -118,7 +122,7 @@
 import UserProfile from './Profile.vue';
 import { db, auth } from '../../firebase';  // Ya tienes auth y db importados desde aquí
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { collection, doc, setDoc, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, doc, setDoc, query, orderBy, onSnapshot, addDoc } from "firebase/firestore";
 
 export default {
   data() {
@@ -195,6 +199,34 @@ export default {
 
       // Suscribirse a los cambios en los documentos
       onSnapshot(postsQuery, (snapshot) => {
+        this.posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      });
+    },
+ // Crear nueva publicación
+ async createPost() {
+      if (!this.newPostTitle || !this.newPostDescription) return;
+
+      const author = this.user ? (this.user.displayName || this.user.email) : 'Anónimo';
+
+      try {
+        await addDoc(collection(db, 'posts'), {
+          titulo: this.newPostTitle,
+          descripcion: this.newPostDescription,
+          autor: author,
+          fecha_publicacion: new Date()
+        });
+        this.newPostTitle = '';  // Limpiar el campo de título
+        this.newPostDescription = '';  // Limpiar el campo de descripción
+        this.loadPosts();  // Recargar las publicaciones
+      } catch (error) {
+        console.error("Error al crear la publicación: ", error.message);
+      }
+    },
+
+    // Cargar las publicaciones de Firestore
+    loadPosts() {
+      const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
+      onSnapshot(postsQuery, snapshot => {
         this.posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       });
     }
