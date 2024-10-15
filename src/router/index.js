@@ -6,7 +6,7 @@ import CreatePost from '../views/CreatePost.vue';
 
 
 const routes = [
-  { path: '/', component: Home },
+  { path: '/', name: 'Home', component: Home },
   { path: '/profile', component: Profile },
   { path: '/posts', component: PostList },
   { path: '/create', component: CreatePost }
