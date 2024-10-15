@@ -47,6 +47,7 @@
     <section class="saludillo" v-if="user">
       <p>Esto significa que el usuario está registrado</p>
       <UserProfile :user="user" @logout="user = null" />
+      <button class="profile" @click="goToProfile">Mi Perfil</button>
       <button class="logout" @click="logoutUser">Cerrar Sesión</button>
     </section>
 
@@ -138,7 +139,6 @@
 import { db, auth } from '../../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
 import { collection, doc, setDoc, query, orderBy, onSnapshot, addDoc, where } from "firebase/firestore";
-
 export default {
   data() {
     return {
@@ -175,7 +175,6 @@ loadPosts() {
         fecha_publicacion: postData.fecha_publicacion.toDate() // Convertir Timestamp a Date
       };
     });
-
     // Cargar los comentarios de la colección 'comments' para cada post
     this.posts.forEach(post => {
       const commentsQuery = query(collection(db, 'comments'), where('postId', '==', post.id));
@@ -188,13 +187,10 @@ loadPosts() {
     });
   });
 },
-
     // Crear una nueva publicación
     async createPost() {
       if (!this.newPostTitle || !this.newPostDescription) return;
-
       const author = this.user ? (this.user.displayName || this.user.email) : 'Anónimo';
-
       try {
         await addDoc(collection(db, 'posts'), {
           titulo: this.newPostTitle,
@@ -208,14 +204,11 @@ loadPosts() {
         console.error("Error al crear la publicación: ", error.message);
       }
     },
-
     // Añadir un comentario
     async addComment(postId) {
       const commentText = this.newCommentText[postId]; // Obtener el comentario para la publicación
       if (!commentText) return;
-
       const author = this.user ? (this.user.displayName || this.user.email) : 'Anónimo';
-
       try {
         // Añadir el comentario a la colección 'comments' en Firebase
         await addDoc(collection(db, 'comments'), {
@@ -224,14 +217,12 @@ loadPosts() {
           publicacion: new Date(),  // Timestamp de la publicación del comentario
           postId: postId  // Relacionar comentario con la publicación
         });
-
         // Limpiar el campo de comentario tras enviarlo
         this.newCommentText[postId] = ''; 
       } catch (error) {
         console.error("Error al agregar el comentario: ", error.message);
       }
     },
-
     // Registrar un nuevo usuario
     async registerUser() {
       try {
@@ -249,7 +240,6 @@ loadPosts() {
         console.error("Error al registrar usuario: ", error.message);
       }
     },
-
     // Iniciar sesión
     async loginUser() {
       try {
@@ -259,7 +249,6 @@ loadPosts() {
         console.error("Error al iniciar sesión: ", error.message);
       }
     },
-
     // Cerrar sesión
     async logoutUser() {
       try {
@@ -269,13 +258,16 @@ loadPosts() {
         console.error("Error al cerrar sesión: ", error.message);
       }
     },
-
     // Cambiar entre registro y login (si tienes animaciones o clases dinámicas)
     switchToSignIn() {
       document.getElementById('container').classList.remove('right-panel-active');
     },
     switchToSignUp() {
       document.getElementById('container').classList.add('right-panel-active');
+    },
+    // Ir al perfil
+    goToProfile() {
+      this.$router.push('/profile');
     }
   }
 };
