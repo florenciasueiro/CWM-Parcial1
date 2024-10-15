@@ -47,7 +47,6 @@
     <section class="saludillo" v-if="user">
       <p>Esto significa que el usuario está registrado</p>
       <UserProfile :user="user" @logout="user = null" />
-      <button class="profile" @click="goToProfile">Mi Perfil</button>
       <button class="logout" @click="logoutUser">Cerrar Sesión</button>
     </section>
 
@@ -277,11 +276,6 @@ loadPosts() {
     },
     switchToSignUp() {
       document.getElementById('container').classList.add('right-panel-active');
-    },
-
-    // Ir al perfil
-    goToProfile() {
-      this.$router.push('/profile');
     }
   }
 };
