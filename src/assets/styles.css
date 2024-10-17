@@ -96,6 +96,10 @@ input {
 	text-shadow: 2px 2px 5px black;
 }
 
+.saludillo button{
+	margin: 0 15px;
+}
+
 .container {
 	background-color: #fff;
 	border-radius: 10px;
@@ -277,6 +281,47 @@ input {
 	padding: 10px;
 	border-radius: 10px;
 	width: 90%;
+}
+
+/*----------------------------------------------------------- Perfil ----------------------------------------------------*/
+
+.perfil{
+	background-color: #fffffff8;
+	width: 900px;
+	border-radius: 10px;
+	text-align: center;
+	padding: 10px 50px;
+	margin: 10px 0;
+	box-shadow: 2px 2px 5px black;
+}
+
+.perfil img{
+	width: 300px;
+	height: 300px;
+}
+
+.edit{
+	background-color: rgba(206, 192, 0, 0.85);
+	text-shadow: 2px 2px 5px black;
+	border: solid 1px black;
+}
+
+.edit:hover{
+	background-color: rgba(114, 112, 0, 0.85);
+}
+
+.user-info button, .edit-profile button{
+	margin: 10px;
+}
+
+.profile{
+	background-color: rgb(20, 136, 204);
+	text-shadow: 2px 2px 5px black;
+	border: solid 1px black;
+}
+
+.profile:hover{
+	background-color: rgba(0, 100, 146, 0.85);
 }
 
 

@@ -7,8 +7,8 @@ import UserProfile from '../components/UserProfile.vue';
 
 
 const routes = [
-  { path: '/', component: Home },
-  { path: '/profile', component: Profile },
+  { path: '/', name: 'Home', component: Home },
+  { path: '/profile', name: 'Profile', component: Profile },
   { path: '/posts', component: PostList },
   { path: '/create', component: CreatePost },
   { path: '/user/:userId',
