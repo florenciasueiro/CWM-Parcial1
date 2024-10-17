@@ -108,11 +108,11 @@
           <header>
             <h3>{{ post.titulo }}</h3>
             <p>Publicado por: 
-              <!-- Aquí redirigimos al perfil del autor con su userId -->
-              <router-link :to="{ name: 'UserProfile', params: { userId: post.autorId } }">
-                {{ post.autor }}
-              </router-link>
-            </p>
+  <router-link :to="{ name: 'UserProfile', params: { userId: post.autorId } }">
+    {{ post.autor }}
+  </router-link>
+</p>
+
           </header>
           <section>
             <p>{{ post.descripcion }}</p>
@@ -177,6 +177,29 @@ export default {
     });
   },
   methods: {
+  async registerUser() {
+    try {
+      // Registrar el usuario con Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword);
+      this.user = userCredential.user;
+
+      // Guardar los datos del usuario en Firestore en la colección 'users'
+      await setDoc(doc(db, 'users', this.user.uid), {
+        name: this.registerUsername,
+        email: this.registerEmail,
+      });
+
+      // Actualizar el perfil del usuario en Firebase Authentication
+      await updateProfile(this.user, {
+        displayName: this.registerUsername,
+      });
+
+      this.loadPosts(); // Cargar publicaciones después de que el usuario se registra
+    } catch (error) {
+      console.error("Error al registrar usuario: ", error.message);
+    }
+  },
+
     // Cargar publicaciones y comentarios
     loadPosts() {
       const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
