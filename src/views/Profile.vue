@@ -44,7 +44,6 @@
       <p>{{ user.email }}</p>
       <button class="profile" @click="goHome">Volver a Home</button>
       <button class="edit" @click="enableEditing">Editar Perfil</button>
-      <button class="logout" @click="logoutUser">Cerrar Sesión</button>
     </div>
 
     <!-- Formulario para editar perfil -->
@@ -52,9 +51,6 @@
       <h2>Editar Perfil</h2>
       <label for="displayName">Nombre:</label>
       <input v-model="updatedProfile.displayName" id="displayName" type="text">
-
-      <label for="email">Email:</label>
-      <input v-model="updatedProfile.email" id="email" type="email">
       
       <label for="photoURL">Foto de perfil (URL):</label>
       <input v-model="updatedProfile.photoURL" id="photoURL" type="text">
@@ -66,7 +62,7 @@
 </template>
 
 <script>
-import { signOut, updateProfile, updateEmail } from "firebase/auth";
+import { updateProfile } from "firebase/auth";
 import { auth } from '../../firebase'; // Asegúrate de tener Firebase configurado
 
 export default {
@@ -78,19 +74,11 @@ export default {
       updatedProfile: {
         displayName: this.user.displayName || '',
         photoURL: this.user.photoURL || '',
-        email: this.user.email || ''  // Agrega aquí el email del usuario
       }
     };
   },
 
   methods: {
-    logoutUser() {
-      signOut(auth).then(() => {
-        this.$emit('logout');  // Emitimos un evento para informar al componente padre
-      }).catch((error) => {
-        console.error("Error al cerrar sesión: ", error.message);
-      });
-    },
     enableEditing() {
       this.editing = true;
     },
@@ -99,25 +87,12 @@ export default {
       // Restaurar los valores originales
       this.updatedProfile.displayName = this.user.displayName;
       this.updatedProfile.photoURL = this.user.photoURL;
-      this.updatedProfile.email = this.user.email; // Restablecer el email original
     },
     updateProfile() {
     // Actualizar el nombre y la foto de perfil primero
     updateProfile(auth.currentUser, {
       displayName: this.updatedProfile.displayName,
       photoURL: this.updatedProfile.photoURL
-    }).then(() => {
-      // Si el email fue modificado, intentamos actualizarlo
-      if (this.updatedProfile.email !== this.user.email) {
-        return updateEmail(auth.currentUser, this.updatedProfile.email)
-          .then(() => {
-            console.log('Correo electrónico actualizado con éxito');
-          })
-          .catch((error) => {
-            console.error('Error al actualizar el correo electrónico:', error.message);
-            alert(`Error al actualizar el correo electrónico: ${error.message}`);
-          });
-      }
     }).then(() => {
       // Emitimos un evento para actualizar la información en el componente padre
       this.$emit('profileUpdated', this.updatedProfile);
