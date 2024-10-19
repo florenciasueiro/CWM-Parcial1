@@ -46,7 +46,7 @@
     <!-- Mostrar perfil de usuario si está autenticado -->
     <section class="saludillo" v-if="user">
       <p>Esto significa que el usuario está registrado</p>
-      <UserProfile :user="user" @logout="user = null" />
+      <UserProfile :user="user" @logout="user = null" :key="user ? user.uid : 'guest'" />
       <button class="profile" @click="goToProfile">Mi Perfil</button>
       <button class="logout" @click="logoutUser">Cerrar Sesión</button>
     </section>
@@ -108,17 +108,18 @@
         <article v-for="post in posts" :key="post.id" class="post">
           <header>
             <h3>{{ post.titulo }}</h3>
-            <p>Publicado por: 
-  <router-link :to="{ name: 'UserProfile', params: { userId: post.autorId } }">
-    {{ post.autor }}
-  </router-link>
-</p>
+            <p>Publicado por:
+              <router-link :to="{ name: 'UserProfile', params: { userId: user.uid } }">
 
+                {{ post.autor }}
+              </router-link>
+            </p>
           </header>
           <section>
             <p>{{ post.descripcion }}</p>
             <p><strong>Fecha de publicación:</strong> {{ post.fecha_publicacion.toLocaleDateString() }}</p>
           </section>
+
           <!-- Sección de comentarios -->
           <section class="comments">
             <h4>Comentarios</h4>
@@ -144,6 +145,7 @@
 import { db, auth } from '../../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
 import { collection, doc, setDoc, query, orderBy, onSnapshot, addDoc, where } from "firebase/firestore";
+
 export default {
   data() {
     return {
@@ -156,7 +158,8 @@ export default {
       loginPassword: '',
       registerUsername: '',
       registerEmail: '',
-      registerPassword: ''
+      registerPassword: '',
+      isRightPanelActive: false // Control de la clase de panel activo
     };
   },
   created() {
@@ -168,43 +171,67 @@ export default {
     });
   },
   methods: {
-  async registerUser() {
-    try {
-      // Registrar el usuario con Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword);
-      this.user = userCredential.user;
+    // Registrar un nuevo usuario
+    async registerUser() {
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword);
+        this.user = userCredential.user;
 
-      // Guardar los datos del usuario en Firestore en la colección 'users'
-      await setDoc(doc(db, 'users', this.user.uid), {
-        name: this.registerUsername,
-        email: this.registerEmail,
-      });
+        // Guardar los datos del usuario en Firestore en la colección 'users'
+        await setDoc(doc(db, 'users', this.user.uid), {
+          name: this.registerUsername,
+          email: this.registerEmail,
+        });
 
-      // Actualizar el perfil del usuario en Firebase Authentication
-      await updateProfile(this.user, {
-        displayName: this.registerUsername,
-      });
+        // Actualizar el perfil del usuario en Firebase Authentication
+        await updateProfile(this.user, {
+          displayName: this.registerUsername,
+        });
 
-      this.loadPosts(); // Cargar publicaciones después de que el usuario se registra
-    } catch (error) {
-      console.error("Error al registrar usuario: ", error.message);
-    }
-  },
+        this.loadPosts(); // Cargar publicaciones después de que el usuario se registra
+      } catch (error) {
+        console.error("Error al registrar usuario: ", error.message);
+      }
+    },
+
+    // Iniciar sesión
+    async loginUser() {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, this.loginEmail, this.loginPassword);
+        this.user = userCredential.user;
+      } catch (error) {
+        console.error("Error al iniciar sesión: ", error.message);
+      }
+    },
+
+    // Cerrar sesión
+    async logoutUser() {
+      try {
+        await signOut(auth);
+        this.user = null;
+      } catch (error) {
+        console.error("Error al cerrar sesión: ", error.message);
+      }
+    },
 
     // Cargar publicaciones y comentarios
-loadPosts() {
+    loadPosts() {
   const postsQuery = query(collection(db, 'posts'), orderBy('fecha_publicacion', 'desc'));
   onSnapshot(postsQuery, snapshot => {
+    console.log("Publicaciones recuperadas:", snapshot.docs.length); // Ver cuántos documentos se recuperan
     this.posts = snapshot.docs.map(doc => {
       const postData = doc.data();
+      console.log("Datos de publicación:", postData); // Ver datos de cada publicación
       return {
         id: doc.id,
         ...postData,
-        fecha_publicacion: postData.fecha_publicacion.toDate() // Convertir Timestamp a Date
+        fecha_publicacion: postData.fecha_publicacion ? postData.fecha_publicacion.toDate() : null
       };
     });
-    // Cargar los comentarios de la colección 'comments' para cada post
+
+    // Cargar comentarios para cada publicación
     this.posts.forEach(post => {
+      post.comments = post.comments || [];
       const commentsQuery = query(collection(db, 'comments'), where('postId', '==', post.id));
       onSnapshot(commentsQuery, commentSnapshot => {
         post.comments = commentSnapshot.docs.map(commentDoc => ({
@@ -215,10 +242,15 @@ loadPosts() {
     });
   });
 },
-    // Crear una nueva publicación
+
+    // Crear nueva publicación
     async createPost() {
-      if (!this.newPostTitle || !this.newPostDescription) return;
+      if (!this.newPostTitle || !this.newPostDescription) {
+        alert('El título y la descripción son obligatorios');
+        return;
+      }
       const author = this.user ? (this.user.displayName || this.user.email) : 'Anónimo';
+
       try {
         await addDoc(collection(db, 'posts'), {
           titulo: this.newPostTitle,
@@ -226,76 +258,50 @@ loadPosts() {
           autor: author,
           fecha_publicacion: new Date()
         });
+
         this.newPostTitle = '';
         this.newPostDescription = '';
       } catch (error) {
         console.error("Error al crear la publicación: ", error.message);
       }
     },
+
     // Añadir un comentario
     async addComment(postId) {
       const commentText = this.newCommentText[postId]; // Obtener el comentario para la publicación
       if (!commentText) return;
       const author = this.user ? (this.user.displayName || this.user.email) : 'Anónimo';
       try {
-        // Añadir el comentario a la colección 'comments' en Firebase
         await addDoc(collection(db, 'comments'), {
           contenido: commentText,
           autor: author,
-          publicacion: new Date(),  // Timestamp de la publicación del comentario
-          postId: postId  // Relacionar comentario con la publicación
+          publicacion: new Date(),
+          postId: postId
         });
-        // Limpiar el campo de comentario tras enviarlo
-        this.newCommentText[postId] = ''; 
+        this.newCommentText[postId] = ''; // Limpiar el comentario después de enviarlo
       } catch (error) {
         console.error("Error al agregar el comentario: ", error.message);
       }
     },
-    // Registrar un nuevo usuario
-    async registerUser() {
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, this.registerEmail, this.registerPassword);
-        this.user = userCredential.user;
-        // Guardar el nombre de usuario en Firebase Auth
-        await updateProfile(this.user, {
-          displayName: this.registerUsername
-        });
-        // Limpiar campos
-        this.registerUsername = '';
-        this.registerEmail = '';
-        this.registerPassword = '';
-      } catch (error) {
-        console.error("Error al registrar usuario: ", error.message);
-      }
-    },
-    // Iniciar sesión
-    async loginUser() {
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, this.loginEmail, this.loginPassword);
-        this.user = userCredential.user;
-      } catch (error) {
-        console.error("Error al iniciar sesión: ", error.message);
-      }
-    },
-    // Cerrar sesión
-    async logoutUser() {
-      try {
-        await signOut(auth);
-        this.user = null;
-      } catch (error) {
-        console.error("Error al cerrar sesión: ", error.message);
-      }
-    },
-    // Cambiar entre registro y login (si tienes animaciones o clases dinámicas)
-    switchToSignIn() {
-      document.getElementById('container').classList.remove('right-panel-active');
-    },
-    switchToSignUp() {
-      document.getElementById('container').classList.add('right-panel-active');
-    },
-    // Ir al perfil
+
+    // Redirigir al perfil del usuario
     goToProfile() {
-      this.$router.push('/profile');
+  if (this.user && this.user.uid) {
+    this.$router.push({ name: 'userProfile', params: { userId: someUserId } });
+
+  } else {
+    console.error("No se puede redirigir al perfil, el usuario no está autenticado.");
+  }
+},
+
+    // Cambiar a la vista de inicio de sesión
+    switchToSignIn() {
+      this.isRightPanelActive = false;
+    },
+
+    // Cambiar a la vista de registro
+    switchToSignUp() {
+      this.isRightPanelActive = true;
     }
   }
 };

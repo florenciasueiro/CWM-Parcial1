@@ -11,9 +11,7 @@ const routes = [
   { path: '/profile', name: 'Profile', component: Profile },
   { path: '/posts', component: PostList },
   { path: '/create', component: CreatePost },
-  { path: '/user/:userId',
-    name: 'UserProfile',
-    component: UserProfile }
+  { path: '/user/:userId', name: 'UserProfile', component: UserProfile },
 ];
 
 const router = createRouter({
