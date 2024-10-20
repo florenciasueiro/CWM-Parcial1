@@ -287,8 +287,7 @@ export default {
     // Redirigir al perfil del usuario
     goToProfile() {
   if (this.user && this.user.uid) {
-    this.$router.push({ name: 'userProfile', params: { userId: someUserId } });
-
+    this.$router.push({ name: 'userProfile', params: { userId: this.user.uid } });
   } else {
     console.error("No se puede redirigir al perfil, el usuario no está autenticado.");
   }
